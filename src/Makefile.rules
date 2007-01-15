@@ -1,0 +1,146 @@
+##
+## Standard rules
+##
+
+.SUFFIXES: .c .C .cc .o .i .S .s .l .y .ui .h
+
+$(OBJ_DIR)/%.o %.o: %.c
+	$(ECHO) "    ---- Compiling $< (C)"
+	$(SILENT) $(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(OBJ_DIR)/%.o %.o: %.C
+	$(ECHO) "    ---- Compiling $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(OBJ_DIR)/%.o %.o: %.cc
+	$(ECHO) "    ---- Compiling $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(OBJ_DIR)/%.o %.o: %.cpp
+	$(ECHO) "    ---- Compiling $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(OBJ_DIR)/%.i %.i: %.c
+	$(ECHO) "    ---- Pre-processing $< (C)"
+	$(SILENT) $(CC) $(CFLAGS) $(INCLUDES) $< > $@
+
+$(OBJ_DIR)/%.i %.i: %.C
+	$(ECHO) "    ---- Pre-processing $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) $< > $@
+
+$(OBJ_DIR)/%.i %.i: %.cc
+	$(ECHO) "    ---- Pre-processing $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) $< > $@
+
+$(OBJ_DIR)/%.s %.s: %.c
+	$(ECHO) "    ---- Creating assembly file for $< (C)"
+	$(SILENT) $(CC) $(CFLAGS) $(INCLUDES) -S $<
+
+$(OBJ_DIR)/%.s %.s: %.C
+	$(ECHO) "    ---- Creating assembly file for $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) -S $<
+
+$(OBJ_DIR)/%.s: %.cc
+	$(ECHO) "    ---- Creating assembly file for $< (C++)"
+	$(SILENT) $(CXX) $(CXXFLAGS) $(INCLUDES) -S $<
+
+$(OBJ_DIR)/%.c %.c: %.l
+	$(ECHO) "    ---- Creating C file for $< (LEX)"
+	$(SILENT) $(LEX) $<
+	$(SILENT) mv -f lex.yy.c $*.c
+
+$(OBJ_DIR)/%.C %.C: %.l
+	$(ECHO) "    ---- Creating C++ file for $< (LEX)"
+	$(SILENT) $(LEX) -+ $<
+	$(SILENT) mv -f lex.yy.cc $*.cc
+	$(SILENT) mv -f FlexLexer.h $*.h
+
+$(OBJ_DIR)/%.cc %.cc: %.l
+	$(ECHO) "    ---- Creating C++ file for $< (LEX)"
+	$(SILENT) $(LEX) -+ $<
+	$(SILENT) mv -f lex.yy.c $*.cc
+	$(SILENT) mv -f FlexLexer.h $*.h
+
+$(OBJ_DIR)/%.tab.c %.tab.c: %.y
+	$(ECHO) "    ----- Creating C file for $< (YACC)"
+	$(SILENT) $(YACC) -b $* $<
+
+$(OBJ_DIR)/%.tab.C %.tab.C: %.y
+	$(ECHO) "    ----- Creating C++ file for $< (YACC)"
+	$(SILENT) $(YACC) -b $* $<
+	$(SILENT) mv -f $*.tab.c $*.tab.cc
+
+$(OBJ_DIR)/%.tab.cc %.tab.cc: %.y
+	$(ECHO) "    ---- Creating C++ file for $< (YACC)"
+	$(SILENT) $(YACC) -b $* $<
+	$(SILENT) mv -f $*.tab.c $*.tab.cc
+
+.SECONDARY:
+
+$(GUI_DIR)/%.h %.h: %.ui
+	$(ECHO) "    ---- Creating Header file for $< (uic)"
+	$(SILENT) $(QT_BIN)/uic $< -o $@
+
+$(GUI_DIR)/%.cpp %.cpp: %.ui
+	$(ECHO) "    ---- Creating C++ file for $< (uic)"
+	$(SILENT) $(QT_BIN)/uic -impl $*.h $< -o $@
+
+$(GUI_DIR)/%-moc.cpp %-moc.cpp: %.h
+	$(ECHO) "    ---- Creating MOC C++ file for $< (moc)"
+	$(SILENT) $(QT_BIN)/moc -o $@ $<
+
+##
+## Packaging rules
+## These are basically broke right now
+##
+
+#tar-src:
+#	$(RM) $(NAME)-src.tar ;
+#	cd .. ; \
+#	for i in $(TAR_SRC) ; do \
+#		tar -rhvf $(NAME)/$(NAME)-src.tar $(NAME)/$$i ; \
+#	done
+#	gzip -9 $(NAME)-src.tar
+#	mv -f $(NAME)-src.tar.gz $(NAME)-src.tgz
+
+#tar-bin: build doc
+#	$(RM) $(NAME)-bin.tar ;
+#	for i in $(TAR_BIN) ; do \
+#		tar -rhvf $(NAME)-bin.tar $$i ; \
+#	done
+#	gzip -9 $(NAME)-bin.tar
+#	mv -f $(NAME)-bin.tar.gz $(NAME)-bin.tgz
+
+#rpm:
+
+#srpm:
+
+##
+## Need come CVS and version rules
+##
+
+#cvs_ci:
+
+#cvs_co:
+
+#cvs_makever:
+
+#compile-date.h:
+
+
+##
+## Dependencies
+##
+
+dep $(DEPEND) depend:
+ifeq ($(DEPENDENCIES),)
+else
+	$(ECHO) "    ---- Analysing dependencies for $(DEPENDENCIES)"
+	$(SILENT) $(CXX) -M $(CXXFLAGS) $(INCLUDES) $(DEPENDENCIES)  | \
+	$(AWK) '{if (index($$0,".o:") > 0) printf "$(OBJ_DIR)/"; print $0}' \
+	> $(DEPEND)
+endif
+
+ifeq ($(DEPEND), $(wildcard $(DEPEND)))
+include $(DEPEND)
+endif
