@@ -1,83 +1,31 @@
 #include <qapplication.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <navigation/utils.h>
-
-#ifdef __cplusplus
-}
-#endif
-
-#if QT_VERSION >= 300
-#include "gui.h"
-#else
-#include "gui-2.3.h"
-#endif
-#include "mapview.h"
-
-#include <qvariant.h>
-#include <qframe.h>
-#include <qgroupbox.h>
-#include <qpushbutton.h>
-#include <qscrollbar.h>
-#include <qmime.h>
-#include <qdragobject.h>
-#include <qlayout.h>
-#include <qtooltip.h>
-#include <qwhatsthis.h>
 #include <qaction.h>
-#include <qmenubar.h>
-#include <qpopupmenu.h>
-#include <qtoolbar.h>
-#include <qimage.h>
-#include <qpixmap.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <math.h>
-#include <values.h>
-#include <unistd.h>
-#include <termios.h>
-#include <fcntl.h>
-#include <sys/signal.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#include <sys/ioctl.h>
-
-#include "map2d.h"
-
-MAP2D_SETTINGS          settings;
-
-MAP2                    * global_map;
-MAP2                    * global_ray_map;
-MAP2                    * local_map;
-MAP2                    * local_ray_map;
-
-LASERSENS2_DATA         * current_scan;
-RMOVE2                  * current_movement;
-
-#ifdef __cplusplus
-}
-#endif
+#include "gui.h"
+#include "mapview.h"
 
 QApplication            * papp;
 MapGUI                  * wptr;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <carmen/carmen.h>
+#include <carmen/logtools.h>
+#include "map2d.h"
+
+MAP2                       * global_map;
+MAP2                       * local_map;
+
+extern logtools_lasersens2_data_t * current_scan;
+extern logtools_rmove2_t          * current_movement;
+
 void
-initialize_maps( MapGUI * window, MAP2 * local_map, MAP2 * ray_map,
-		 MAP2 * global_map, MAP2 * global_ray_map )
+initialize_maps( MapGUI * window, MAP2 * local_map, MAP2 * global_map )
 {
-  int         size_x, size_y;
-  RPOS2       npos = { 0.0, 0.0, 0.0 };
+  int                  size_x, size_y;
+  logtools_rpos2_t     npos = { 0.0, 0.0, 0.0 };
   
   fprintf( stderr, "***************************************\n" );
   fprintf( stderr, "*        MAPS\n" );
@@ -94,17 +42,6 @@ initialize_maps( MapGUI * window, MAP2 * local_map, MAP2 * ray_map,
     fprintf( stderr, "***************************************\n" );
   }
   
-  if (settings.use_local_ray_map) {
-    size_x = (int) ceil((ADDITIONAL_X_SIZE+settings.local_ray_map_max_range)/
-			settings.local_ray_map_resolution);
-    size_y = (int) ceil((ADDITIONAL_Y_SIZE+settings.local_ray_map_max_range)/
-			settings.local_ray_map_resolution);
-    fprintf( stderr, "* INFO: create -local ray- map: %d x %d\n", size_x, size_y );
-    initialize_map( ray_map, size_x, size_y, 20, size_y/2,
-		    settings.local_ray_map_resolution, npos );
-    fprintf( stderr, "***************************************\n" );
-  }
-  
   if (settings.use_global_map) {
     fprintf( stderr, "* INFO: create -global- map: %d x %d\n",
 	     settings.global_map_size_x, settings.global_map_size_y );
@@ -118,20 +55,6 @@ initialize_maps( MapGUI * window, MAP2 * local_map, MAP2 * ray_map,
     fprintf( stderr, "***************************************\n" );
   }
   
-  if (settings.use_global_ray_map) {
-    fprintf( stderr, "* INFO: create -global ray- map: %d x %d\n",
-	     settings.global_ray_map_size_x,
-	     settings.global_ray_map_size_y );
-    initialize_global_map( global_ray_map,
-			   settings.global_ray_map_size_x,
-			   settings.global_ray_map_size_y,
-			   settings.global_ray_map_start_x,
-			   settings.global_ray_map_start_y,
-			   settings.global_ray_map_resolution,
-			   settings.global_ray_map_start_pos, 1 );
-    fprintf( stderr, "***************************************\n" );
-  }
-  
   if (settings.use_graphics) {
     fprintf( stderr, "* INFO: set graphics -global- map size\n" );
     fprintf( stderr, "***************************************\n" );
@@ -141,17 +64,6 @@ initialize_maps( MapGUI * window, MAP2 * local_map, MAP2 * ray_map,
       fprintf( stderr, "***************************************\n" );
       window->Map->setLocalSize( local_map->mapsize.x, local_map->mapsize.y );
     }
-    if (settings.use_local_ray_map) {
-      fprintf( stderr, "* INFO: set graphics -local ray- map size\n" );
-      fprintf( stderr, "***************************************\n" );
-      window->Map->setLocalRaySize( ray_map->mapsize.x, ray_map->mapsize.y );
-    }
-    if (settings.use_global_ray_map) {
-      fprintf( stderr, "* INFO: set graphics -global ray- map size\n" );
-      fprintf( stderr, "***************************************\n" );
-      window->Map->setGlobalRaySize( global_ray_map->mapsize.x,
-				     global_ray_map->mapsize.y );
-    }
     fprintf( stderr, "* INFO: show maps\n" );
     fprintf( stderr, "***************************************\n" );
     
@@ -160,20 +72,6 @@ initialize_maps( MapGUI * window, MAP2 * local_map, MAP2 * ray_map,
     } else {
       window->LocalMapType->setEnabled( FALSE );
       window->LocalMapType->hide();
-    }
-    
-    if (settings.use_local_ray_map) {
-      window->RayMapType->setEnabled( TRUE );
-    } else {
-      window->RayMapType->setEnabled( FALSE );
-      window->RayMapType->hide();
-    }
-    
-    if (settings.use_global_ray_map) {
-      window->GlobalRayMapType->setEnabled( TRUE );
-    } else {
-      window->GlobalRayMapType->setEnabled( FALSE );
-      window->GlobalRayMapType->hide();
     }
     
     window->Map->maptype = GLOBAL_MAP;
@@ -203,13 +101,13 @@ app_process_events( void )
 }
 
 void
-paint_robot( RPOS2 pos )
+paint_robot( logtools_rpos2_t pos )
 {
   wptr->Map->paintRobot( pos );
 }
 
 void
-plot_robot( RPOS2 pos )
+plot_robot( logtools_rpos2_t pos )
 {
   wptr->Map->plotRobotPosition( pos );
 }
@@ -232,11 +130,15 @@ center_robot( void )
   wptr->Map->centerRobot();
 }
 
+#ifdef __cplusplus
+}
+#endif
+
 void
 print_usage( void )
 {
   fprintf( stderr,
-	   "usage: map2d [-ini <INI-FILE>] [-file <SCRIPT-FILE>]\n" );
+	   "usage: map2d [-ini <INI-FILE>] [-file <LOG-FILE>]\n" );
 }
 
 int
@@ -248,9 +150,7 @@ main( int argc, char *argv[] )
   int                     i;
 
   MAP2                    lmap;
-  MAP2                    rmap;
   MAP2                    gmap;
-  MAP2                    grmap;
   
   
   int                     ini_file = FALSE;
@@ -260,8 +160,6 @@ main( int argc, char *argv[] )
 
   local_map        = &lmap;
   global_map       = &gmap;
-  global_ray_map   = &grmap;
-  local_ray_map    = &rmap;
 
   wptr             = &window;
   papp             = &app;
@@ -280,9 +178,6 @@ main( int argc, char *argv[] )
     } else if (!strcmp(argv[i],"-file") && (argc>i+1)) {
       strncpy( settings.data_filename, argv[++i], MAX_NAME_LENGTH );
       settings.mode = READ_FILE;
-    } else if (!strcmp(argv[i],"-filestream") && (argc>i+1)) {
-      strncpy( settings.data_filename, argv[++i], MAX_NAME_LENGTH );
-      settings.mode = READ_LINES;
     } else {
       print_usage();
       exit(1);
@@ -297,31 +192,27 @@ main( int argc, char *argv[] )
 
   fprintf( stderr, "INFO: global map max range:       %.1f\n",
 	   settings.global_map_max_range );
+  fprintf( stderr, "INFO: global map size:            %d %d\n",
+	   settings.global_map_size_x,
+	   settings.global_map_size_y );
+  fprintf( stderr, "INFO: global map start:           %d %d\n",
+	   settings.global_map_start_x,
+	   settings.global_map_start_y );
   fprintf( stderr, "INFO: global map resolution:      %.1f\n",
 	   settings.global_map_resolution );
-  fprintf( stderr, "INFO: global ray map max range:   %.1f\n",
-	   settings.global_ray_map_max_range );
-  fprintf( stderr, "INFO: global ray map resolution:  %.1f\n",
-	   settings.global_ray_map_resolution );
   
   if (create_output_files() != 0) {
     exit(1);
   }
 
-  initialize_maps( &window, &lmap, &rmap, &gmap, &grmap );
+  initialize_maps( &window, &lmap, &gmap );
 
-  fprintf( stderr, "XXXXXXXXXXXXXXXXXXXXX\n" );
-  
   switch(settings.mode) {
   case READ_FILE:
-    run_data_file( settings, &lmap, &rmap, &gmap, &grmap );
+    run_data_file( settings, &lmap, &gmap );
     break;
   case ONLINE:
-    settings.script_type = REC;
-    run_online( settings, &lmap, &rmap, &gmap, TRUE );
-    break;
-  case READ_LINES:
-    run_online( settings, &lmap, &rmap, &gmap, FALSE );
+    run_online( settings, &lmap, &gmap, argc, argv );
     break;
   }
   

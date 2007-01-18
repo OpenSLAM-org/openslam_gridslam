@@ -1,118 +1,48 @@
-1NAME  = mapper
-CONF  = ../Makefile.conf
-RULES = ../Makefile.rules
+include $(CARMEN_HOME)/src/Makefile.conf
 
-##
-## System config variables
-##
+MODULE_NAME = "SCAN_MATCHER"
+MODULE_COMMENT = "Grid based Scan Matcher by D. Haehnel"
 
-include $(CONF)
+CFLAGS 	+= 	-Wno-shadow
+IFLAGS 	+=	-I.
+LFLAGS 	+= 	-lglobal -lipc -llogtools -lreadlog
 
-##
-## Variables
-##
+CXXFLAGS += -Wno-non-virtual-dtor
 
-DEPENDENCIES += *.c *.cpp *.h
+QT3_DIR = /usr/lib/qt3
+IFLAGS += -I$(QT3_DIR)/include
 
-CFLAGS      += -DVERBOSE
-
-INCLUDES    += -I$(QT_DIR)/include
-
-LIB_DIRS    += -L$(QT_DIR)/lib
-
-MOC         = $(QT_DIR)/bin/moc
-
-# SILENT =
-
-##
-## local build variables
-##
-
-GUI_DIR = .
-
-GUI_PARTS := \
-	$(GUI_DIR)/gui.h \
-	$(GUI_DIR)/gui.cpp \
-	$(GUI_DIR)/gui-moc.cpp \
-	$(GUI_DIR)/gui-2.3-moc.cpp \
-	$(GUI_DIR)/mapview-moc.cpp
-
-ifeq ($(QT3),yes)
-QT_OBJS := \
-	$(OBJ_DIR)/gui-moc.o \
-	$(OBJ_DIR)/gui.o
+ifeq ($(PROCESSOR),x86_64)
+LFLAGS += -L$(QT3_DIR)/lib64
 else
-QT_OBJS := \
-        $(OBJ_DIR)/gui-2.3-moc.o \
-        $(OBJ_DIR)/gui-2.3.o
+LFLAGS += -L$(QT3_DIR)/lib
 endif
 
-OBJS := \
-	$(QT_OBJS) \
-	$(OBJ_DIR)/mapview.o \
-	$(OBJ_DIR)/mapview-moc.o \
-	$(OBJ_DIR)/line.o \
-	$(OBJ_DIR)/map.o \
-	$(OBJ_DIR)/read-ini.o \
-	$(OBJ_DIR)/match-map.o \
-	$(OBJ_DIR)/global-map.o \
-	$(OBJ_DIR)/write-map.o \
-	$(OBJ_DIR)/map2d.o \
-	$(OBJ_DIR)/ipc.o \
-	$(OBJ_DIR)/run_file.o \
-	$(OBJ_DIR)/run_online.o \
-	$(OBJ_DIR)/main.o
 
-LIBS := $(EXTERN_LIBS) -lglobal -lipc -lqt -lutils -lm
+LFLAGS += -lqt-mt
 
-##
-## Compulsory rules
-##
+GUI_FILES = 		./gui.h ./gui-moc.cpp ./gui.cpp ./mapview-moc.cpp 
 
-all:
-	$(MAKE) export $(DEPEND)
-	$(MAKE) build
+ADD_CLEAN += $(GUI_FILES)
 
-build:	$(OBJ_DIR) \
-	$(BIN_DIR) \
-	show-info \
-	$(BIN_DIR)/mapper
+SOURCES =		line.c map.c read-ini.c match-map.c global-map.c \
+			write-map.c map2d.c ipc.c run_file.c run_online.c \
+			main.cpp mapview.cpp
 
-export:
-	$(SILENT) $(MKDIR) $(NAV_DIR)
-	$(INSTALL_H) `pwd`/mapper_messages.h $(NAV_DIR)
+PUBLIC_INCLUDES = 
+PUBLIC_LIBRARIES = 
+PUBLIC_BINARIES = 
 
-CLEAN_FILES += $(GUI_PARTS)
+MAN_PAGES = 
 
-clean:
-	$(SILENT) $(RM) *.o *.a *~ core a.out obj obj_sun obj_solaris $(CLEAN_FILES)
+TARGETS = 		ml-mapper
 
-distclean: clean
-	$(SILENT) $(RM) $(DEPEND) Makefile.depend* $(DISTCLEAN_FILES)
+# rules
 
-##
-## local rules
-##
+depend:		$(GUI_FILES) 
 
-$(OBJ_DIR) $(LIB_DIR) $(BIN_DIR):
-	$(SILENT) $(MKDIR) $@
+ml-mapper:	$(GUI_FILES) line.o map.o read-ini.o match-map.o global-map.o \
+		write-map.o map2d.o ipc.o run_file.o run_online.o \
+		main.o mapview-moc.o mapview.o gui-moc.o gui.o
 
-show-info: 
-	$(ECHO) "============================================="
-	$(ECHO) "-> found QT version    " $(QT_VERSION)
-	$(ECHO) "-> in directory        " $(QT_DIR)
-	$(ECHO) "-> which is QT>=3.0.0  " $(QT3)
-	$(ECHO) "============================================="
-
-$(BIN_DIR)/mapper: $(OBJ_DIR) $(OBJS)
-	$(ECHO) "    ->>- Creating $@"
-	$(SILENT) $(CC) $(INCLUDES) $(LIB_DIRS) $(CFLAGS) -o $@ \
-		$(OBJS) $(LIBS)
-
-##
-## Standard suffix, version, packaging and dep rules
-##
-
-include $(RULES)
-
-
+include ../Makefile.rules

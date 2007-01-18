@@ -1,48 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <X11/Xlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
-#include <zlib.h>
-
 #include <carmen/carmen.h>
-
 #include <carmen/base_messages.h>
 #include <carmen/laser_messages.h>
 
-#include <navigation/mapper_messages.h>
-#include <navigation/utils.h>
-
 #include "map2d.h"
 
-extern RPOS2                     current_pos;
+extern logtools_rpos2_t          current_pos;
 extern int                       change_map;
 
-static void 
-ipc_set_mode(MSG_INSTANCE msgRef, BYTE_ARRAY callData,
-	     void *clientData __attribute__ ((unused)))
-{
-  static navigation_mapper_set_mode_message  data;
-  IPC_RETURN_TYPE                            err = IPC_OK;
-  FORMATTER_PTR                              formatter;
-  
-  formatter = IPC_msgInstanceFormatter(msgRef);
-  err = IPC_unmarshallData(formatter, callData, &data,
-			   sizeof(navigation_mapper_set_mode_message));
-  IPC_freeByteArray(callData);
-
-  carmen_test_ipc_return(err, "Could not unmarshall data", 
-			 IPC_msgInstanceName(msgRef));
-  change_map = data.mode;
-  update_change_map();
-}
-
+void convert_time( double tval, struct timeval *time );
 
 static void 
 ipc_odometry_handler(MSG_INSTANCE msgRef, BYTE_ARRAY callData,
@@ -126,7 +91,7 @@ ipc_carmen_front_laser_handler( MSG_INSTANCE msgRef, BYTE_ARRAY callData,
   } 
   convert_time( data.timestamp, &online_data.lsens[r].laser.time );
   online_data.lsens[r].id               = settings.laser_number;
-  online_data.lsens[r].laser.anglerange = apxangle;
+  online_data.lsens[r].laser.fov        = apxangle;
   online_data.lsens[r].estpos           = current_pos;
   online_laserupdate = TRUE;
 
@@ -147,22 +112,6 @@ ipc_initialize_messages( void )
   IPC_setMsgQueueLength(CARMEN_LASER_FRONTLASER_NAME, 1);
   carmen_test_ipc(err, "Could not subscribe", CARMEN_LASER_FRONTLASER_NAME);
   
-  /* define messages */
-
-  err = IPC_defineMsg(NAVIGATION_MAPPER_SET_MODE_NAME, IPC_VARIABLE_LENGTH, 
-		      NAVIGATION_MAPPER_SET_MODE_FMT);
-  carmen_test_ipc_exit(err, "Could not define",
-		       NAVIGATION_MAPPER_SET_MODE_NAME);
-
-  err = IPC_defineMsg(NAVIGATION_MAPPER_STATUS_NAME, IPC_VARIABLE_LENGTH, 
-		      NAVIGATION_MAPPER_STATUS_FMT);
-  carmen_test_ipc_exit(err, "Could not define", NAVIGATION_MAPPER_STATUS_NAME);
-
-  err = IPC_subscribe(NAVIGATION_MAPPER_SET_MODE_NAME, ipc_set_mode, NULL);
-  carmen_test_ipc_exit(err, "Could not subscribe to", 
-                       NAVIGATION_MAPPER_SET_MODE_NAME);
-  IPC_setMsgQueueLength(NAVIGATION_MAPPER_SET_MODE_NAME, 100);
-  
 }
 
 void
@@ -172,9 +121,9 @@ ipc_update( void )
 }
 
 void
-ipc_init( char * name )
+ipc_init( int argc, char *argv[] )
 {
-  carmen_initialize_ipc( name );
+  carmen_ipc_initialize( argc, argv );
   ipc_initialize_messages();
 }
 
@@ -183,29 +132,5 @@ ipc_stop( void )
 {
   fprintf( stderr, "INFO: close connection to CENTRAL\n" );
   IPC_disconnect();
-}
-
-void
-ipc_publish_status( RPOS2 pos, struct timeval time )
-{
-  static RPOS2 corr;
-  static int first_time = TRUE;
-  static navigation_mapper_status_message status;
-  IPC_RETURN_TYPE err = IPC_OK;
-  if (first_time) {
-    gethostname( status.host, 10 );
-    first_time = FALSE;
-  }
-  compute_correction_parameters( current_pos, pos, &corr );
-  status.corr_x      = corr.x;
-  status.corr_y      = corr.y;
-  status.corr_theta  = corr.o;
-  status.robot_x     = pos.x;
-  status.robot_y     = pos.y;
-  status.robot_theta = pos.o;
-  status.timestamp = time.tv_sec+(time.tv_usec/1000000.0);
-
-  err = IPC_publishData (NAVIGATION_MAPPER_STATUS_NAME, &status );
-  carmen_test_ipc(err, "Could not publish", NAVIGATION_MAPPER_STATUS_NAME);
 }
 

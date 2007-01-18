@@ -1,4 +1,4 @@
-<!DOCTYPE UI><UI version="3.0" stdsetdef="1">
+<!DOCTYPE UI><UI version="3.3" stdsetdef="1">
 <class>MapGUI</class>
 <widget class="QMainWindow">
     <property name="name">
@@ -23,7 +23,7 @@
     <property name="minimumSize">
         <size>
             <width>540</width>
-            <height>448</height>
+            <height>449</height>
         </size>
     </property>
     <property name="caption">
@@ -184,26 +184,10 @@
                             </widget>
                             <widget class="QPushButton">
                                 <property name="name">
-                                    <cstring>GlobalRayMapType</cstring>
-                                </property>
-                                <property name="text">
-                                    <string>Global Ray Map</string>
-                                </property>
-                            </widget>
-                            <widget class="QPushButton">
-                                <property name="name">
                                     <cstring>LocalMapType</cstring>
                                 </property>
                                 <property name="text">
                                     <string>Local Map</string>
-                                </property>
-                            </widget>
-                            <widget class="QPushButton">
-                                <property name="name">
-                                    <cstring>RayMapType</cstring>
-                                </property>
-                                <property name="text">
-                                    <string>Local Ray Map</string>
                                 </property>
                             </widget>
                             <widget class="QPushButton">
@@ -264,8 +248,6 @@
     <item text="&amp;File" name="fileMenu">
         <action name="fileNewAction"/>
         <action name="fileOpenAction"/>
-        <action name="fileSaveAction"/>
-        <action name="fileSaveAsAction"/>
         <separator/>
         <action name="filePrintAction"/>
         <separator/>
@@ -281,7 +263,7 @@
 <customwidgets>
     <customwidget>
         <class>MapView</class>
-        <header location="global">./mapview.h</header>
+        <header location="global">mapview.h</header>
         <sizehint>
             <width>-1</width>
             <height>-1</height>
@@ -312,7 +294,7 @@
             <string>&amp;New</string>
         </property>
         <property name="accel">
-            <number>4194382</number>
+            <string>Ctrl+N</string>
         </property>
     </action>
     <action>
@@ -329,7 +311,7 @@
             <string>&amp;Open...</string>
         </property>
         <property name="accel">
-            <number>4194383</number>
+            <string>Ctrl+O</string>
         </property>
     </action>
     <action>
@@ -346,7 +328,7 @@
             <string>&amp;Save</string>
         </property>
         <property name="accel">
-            <number>4194387</number>
+            <string>Ctrl+S</string>
         </property>
     </action>
     <action>
@@ -360,7 +342,7 @@
             <string>Save &amp;As...</string>
         </property>
         <property name="accel">
-            <number>0</number>
+            <string></string>
         </property>
     </action>
     <action>
@@ -377,7 +359,7 @@
             <string>&amp;Print...</string>
         </property>
         <property name="accel">
-            <number>4194384</number>
+            <string>Ctrl+P</string>
         </property>
     </action>
     <action>
@@ -394,7 +376,7 @@
             <string>Exit2</string>
         </property>
         <property name="accel">
-            <number>0</number>
+            <string></string>
         </property>
     </action>
     <action>
@@ -417,7 +399,7 @@
             <string>Change Map</string>
         </property>
         <property name="accel">
-            <number>0</number>
+            <string></string>
         </property>
     </action>
     <action>
@@ -437,13 +419,13 @@
             <string>View Path</string>
         </property>
         <property name="accel">
-            <number>0</number>
+            <string></string>
         </property>
     </action>
 </actions>
 <images>
     <image name="image0">
-        <data format="XPM.GZ" length="45">789cd3d7528808f055d0d2e72a2e492cc94c5648ce482c52d04a29cdcdad8c8eb5ade6523250004143a55a6b2e0026630c4f</data>
+        <data format="XBM.GZ" length="79">789c534e494dcbcc4b554829cdcdad8c2fcf4c29c95030e0524611cd48cd4ccf28010a1797249664262b2467241641a592324b8aa363156c15aab914146aadb90067111b1f</data>
     </image>
 </images>
 <connections>
@@ -458,18 +440,6 @@
         <signal>activated()</signal>
         <receiver>MapGUI</receiver>
         <slot>MenuOpenSlot()</slot>
-    </connection>
-    <connection>
-        <sender>fileSaveAction</sender>
-        <signal>activated()</signal>
-        <receiver>MapGUI</receiver>
-        <slot>MenuSaveSlot()</slot>
-    </connection>
-    <connection>
-        <sender>fileSaveAsAction</sender>
-        <signal>activated()</signal>
-        <receiver>MapGUI</receiver>
-        <slot>MenuSaveAsSlot()</slot>
     </connection>
     <connection>
         <sender>filePrintAction</sender>
@@ -502,22 +472,10 @@
         <slot>GlobalMapTypeSlot()</slot>
     </connection>
     <connection>
-        <sender>GlobalRayMapType</sender>
-        <signal>clicked()</signal>
-        <receiver>MapGUI</receiver>
-        <slot>GlobalRayMapTypeSlot()</slot>
-    </connection>
-    <connection>
         <sender>LocalMapType</sender>
         <signal>clicked()</signal>
         <receiver>MapGUI</receiver>
         <slot>LocalMapTypeSlot()</slot>
-    </connection>
-    <connection>
-        <sender>RayMapType</sender>
-        <signal>clicked()</signal>
-        <receiver>MapGUI</receiver>
-        <slot>RayMapTypeSlot()</slot>
     </connection>
     <connection>
         <sender>ShowBeamsType</sender>
@@ -548,14 +506,12 @@
     <tabstop>UpdateMap</tabstop>
     <tabstop>CenterRobot</tabstop>
     <tabstop>GlobalMapType</tabstop>
-    <tabstop>GlobalRayMapType</tabstop>
     <tabstop>LocalMapType</tabstop>
-    <tabstop>RayMapType</tabstop>
     <tabstop>ShowBeamsType</tabstop>
     <tabstop>ClearMap</tabstop>
 </tabstops>
 <includes>
-    <include location="local" impldecl="in declaration">navigation/utils.h</include>
+    <include location="local" impldecl="in declaration">carmen/logtools.h</include>
     <include location="local" impldecl="in implementation">gui.ui.h</include>
 </includes>
 <slots>
@@ -563,15 +519,11 @@
     <slot>CenterRobotSlot()</slot>
     <slot>ClearMapSlot()</slot>
     <slot>MenuNewSlot()</slot>
-    <slot>MenuSaveSlot()</slot>
     <slot>MenuOpenSlot()</slot>
-    <slot>MenuSaveAsSlot()</slot>
     <slot>MenuPrintSlot()</slot>
     <slot>MenuExitSlot()</slot>
     <slot>GlobalMapTypeSlot()</slot>
     <slot>LocalMapTypeSlot()</slot>
-    <slot>RayMapTypeSlot()</slot>
-    <slot>GlobalRayMapTypeSlot()</slot>
     <slot>ShowBeamsTypeSlot()</slot>
     <slot>ViewPathSlot()</slot>
     <slot>ChangeMapSlot()</slot>
@@ -579,4 +531,7 @@
 </slots>
 <pixmapinproject/>
 <layoutdefaults spacing="6" margin="11"/>
+<includehints>
+    <includehint>mapview.h</includehint>
+</includehints>
 </UI>

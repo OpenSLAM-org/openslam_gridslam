@@ -1,20 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
-#include <values.h>
-
-#include <navigation/utils.h>
-
 #include "fast-slam.h"
 
 void
-grid_line_core( iVECTOR2 start, iVECTOR2 end, GRID_LINE *line )
+grid_line_core( logtools_ivector2_t start, logtools_ivector2_t end, logtools_grid_line_t *line )
 {
   int dx, dy, incr1, incr2, d, x, y, xend, yend, xdirflag, ydirflag;
 
@@ -106,10 +93,10 @@ grid_line_core( iVECTOR2 start, iVECTOR2 end, GRID_LINE *line )
 }
 
 void
-grid_line( iVECTOR2 start, iVECTOR2 end, GRID_LINE *line ) {
+grid_line( logtools_ivector2_t start, logtools_ivector2_t end, logtools_grid_line_t *line ) {
   int i,j;
   int half;
-  iVECTOR2 v;
+  logtools_ivector2_t v;
   grid_line_core( start, end, line );
   if ( start.x!=line->grid[0].x ||
        start.y!=line->grid[0].y ) {

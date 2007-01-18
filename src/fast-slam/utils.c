@@ -1,16 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <math.h>
-#include <time.h>
-#include <values.h>
-#include <string.h>
-
-#include <navigation/utils.h>
-#include <magick/api.h>
-
 #include "fast-slam.h"
+#include <magick/api.h>
 
 #define UNKNOWN  0
 #define IN       1
@@ -136,7 +125,7 @@ simple_convolve_map2( MAP2 *map)
 
 
 void
-simple_convolve_map( MAP2 *map, GAUSS_KERNEL kernel )
+simple_convolve_map( MAP2 *map, logtools_gauss_kernel_t kernel )
 {
   int x, y, k, hk;
   double ksum;
@@ -168,7 +157,7 @@ simple_convolve_map( MAP2 *map, GAUSS_KERNEL kernel )
 
 
 int
-map_pos_from_rpos( RPOS2 rpos, MAP2 *map, iVECTOR2 *v )
+map_pos_from_rpos( logtools_rpos2_t rpos, MAP2 *map, logtools_ivector2_t *v )
 {
   v->x = map->center.x + (int) round((rpos.x-map->offset.x)/
 				     (double)map->resolution);
@@ -188,7 +177,7 @@ map_pos_from_rpos( RPOS2 rpos, MAP2 *map, iVECTOR2 *v )
 }
 
 int
-map_pos_from_vec2( VECTOR2 pos, MAP2 *map, iVECTOR2 *v )
+map_pos_from_vec2( logtools_vector2_t pos, MAP2 *map, logtools_ivector2_t *v )
 {
   v->x = map->center.x + (int) ((pos.x-map->offset.x)/
 				(double)map->resolution);
@@ -208,32 +197,33 @@ map_pos_from_vec2( VECTOR2 pos, MAP2 *map, iVECTOR2 *v )
 }
 
 void
-update_map( MAP2 * map, int numvalues, double  * val, double * angle,
-	    RPOS2 estpos, double max_range, double max_usable  )
+update_map( MAP2 * map, int numvalues, float  * val, float * angle,
+	    logtools_rpos2_t estpos, double max_range, double max_usable  )
 {
-  static int            first_time = TRUE; 
-  static GRID_LINE      line;
-  static int            max_num_linepoints = 0;
-  int                   i, j, x, y;
-  iVECTOR2              start, end;
-  VECTOR2               abspt;
-  RMOVE2                nomove = {0.0, 0.0, 0.0};
+  static int                    first_time = TRUE; 
+  static logtools_grid_line_t   line;
+  static int                    max_num_linepoints = 0;
+  int                           i, j, x, y;
+  logtools_ivector2_t           start, end;
+  logtools_vector2_t            abspt;
+  logtools_rmove2_t             nomove = {0.0, 0.0, 0.0};
   
   if (first_time) {
     max_num_linepoints =
       10 * ( max_range / map->resolution );
-    line.grid = (iVECTOR2 *) malloc( max_num_linepoints * sizeof(iVECTOR2) );
+    line.grid = (logtools_ivector2_t *) malloc( max_num_linepoints * sizeof(logtools_ivector2_t) );
     first_time = FALSE;
   }
 
   for (j=0;j<numvalues;j++) {
     if (val[j] <= max_usable ) {
       if (val[j] > max_range ) {
-	abspt = compute_laser_abs_point( estpos, max_range, nomove, angle[j] );
+	abspt = logtools_compute_laser_points( estpos, max_range, nomove, 
+					       angle[j] );
 	map_pos_from_vec2( abspt, map, &end );
       } else {
-	abspt = compute_laser_abs_point( estpos, val[j]+(map->resolution),
-					 nomove, angle[j] );
+	abspt = logtools_compute_laser_points( estpos, val[j]+(map->resolution),
+					       nomove, angle[j] );
 	map_pos_from_vec2( abspt, map, &end );
       }
       map_pos_from_rpos( estpos, map, &start );
@@ -261,7 +251,7 @@ update_map( MAP2 * map, int numvalues, double  * val, double * angle,
 
 void
 map_initialize( MAP2 *map, int sx, int sy, int center_x,
-		int center_y, double resolution, RPOS2 start )
+		int center_y, double resolution, logtools_rpos2_t start )
 {
   int x, y;
 
@@ -363,22 +353,23 @@ compute_calc_of_map( MAP2 * map )
   
 }
 
-BOUNDING_BOX2
-compute_laser_bounding_box( RPOS2 pos, LASERSENS2_DATA lsens,
+logtools_bounding_box_t
+compute_laser_bounding_box( logtools_rpos2_t pos, 
+			    logtools_lasersens2_data_t lsens,
 			    double laser_max_range )
 {
   int                   i;
-  VECTOR2               abspt, min,max;
-  RMOVE2                nomove = {0.0, 0.0, 0.0};
-  BOUNDING_BOX2         bbox;
+  logtools_vector2_t    abspt, min,max;
+  logtools_rmove2_t     nomove = {0.0, 0.0, 0.0};
+  logtools_bounding_box_t         bbox;
   
   min.x =  MAXDOUBLE;    min.y =  MAXDOUBLE;
   max.x = -MAXDOUBLE;    max.y = -MAXDOUBLE;
   
   for (i=0;i<lsens.laser.numvalues;i++) {
     if (lsens.laser.val[i]<=laser_max_range) {
-      abspt = compute_laser_abs_point( pos, lsens.laser.val[i],
-				       nomove, lsens.laser.angle[i] );
+      abspt = logtools_compute_laser_points( pos, lsens.laser.val[i],
+					     nomove, lsens.laser.angle[i] );
       if (abspt.x<min.x) min.x = abspt.x;
       if (abspt.y<min.y) min.y = abspt.y;
       if (abspt.x>max.x) max.x = abspt.x;
@@ -392,7 +383,7 @@ compute_laser_bounding_box( RPOS2 pos, LASERSENS2_DATA lsens,
 
 
 void
-mark_map_cell( iVECTOR2 pos, MAP2 * map )
+mark_map_cell( logtools_ivector2_t pos, MAP2 * map )
 {
   int x, y;
   for (x=pos.x-2;x<pos.x+3;x++) {
@@ -406,7 +397,7 @@ mark_map_cell( iVECTOR2 pos, MAP2 * map )
 }
 
 double
-get_map_val( iVECTOR2 pos, MAP2 map )
+get_map_val( logtools_ivector2_t pos, MAP2 map )
 {
   double val;
   if ( pos.x>=0 && pos.x<map.mapsize.x &&
@@ -426,7 +417,7 @@ get_map_val( iVECTOR2 pos, MAP2 map )
 }
 
 double
-get_map_val3( iVECTOR2 pos, MAP2 map )
+get_map_val3( logtools_ivector2_t pos, MAP2 map )
 {
   double val, value;
   if ( pos.x>=0 && pos.x<map.mapsize.x &&
@@ -447,7 +438,7 @@ get_map_val3( iVECTOR2 pos, MAP2 map )
 }
 
 double
-get_map_val2( iVECTOR2 pos, MAP2 map )
+get_map_val2( logtools_ivector2_t pos, MAP2 map )
 {
   double val;
   if ( pos.x>=0 && pos.x<map.mapsize.x &&
@@ -474,15 +465,15 @@ stretch_function( double x )
 }
 
 double
-get_beam_prob( RPOS2 pos, double val, double angle,
+get_beam_prob( logtools_rpos2_t pos, double val, double angle,
 	       double max_range, MAP2 * map )
 {
-  iVECTOR2              end;
-  VECTOR2               abspt;
-  RMOVE2                nomove = {0.0, 0.0, 0.0};
+  logtools_ivector2_t              end;
+  logtools_vector2_t               abspt;
+  logtools_rmove2_t                nomove = {0.0, 0.0, 0.0};
   
   if (val>=max_range) {
-    abspt = compute_laser_abs_point( pos, max_range-20.0, nomove, angle );
+    abspt = logtools_compute_laser_points( pos, max_range-20.0, nomove, angle );
     map_pos_from_vec2( abspt, map, &end ); 
     mark_map_cell( end, map );
     if ( end.x>=0 && end.x<map->mapsize.x &&
@@ -499,7 +490,7 @@ get_beam_prob( RPOS2 pos, double val, double angle,
     }
   } else {
     /* no maxrange */
-    abspt = compute_laser_abs_point( pos, val,  nomove, angle );
+    abspt = logtools_compute_laser_points( pos, val,  nomove, angle );
     map_pos_from_vec2( abspt, map, &end );
     mark_map_cell( end, map );
     if ( end.x>=0 && end.x<map->mapsize.x &&
@@ -518,22 +509,23 @@ get_beam_prob( RPOS2 pos, double val, double angle,
 }
 
 double
-compute_scan_probability( MAP2 * map, RPOS2 pos, LASERSENS2_DATA lsens,
+compute_scan_probability( MAP2 * map, logtools_rpos2_t pos, 
+			  logtools_lasersens2_data_t lsens,
 			  double max_range, double max_usable )
 {
-  static int            first_time = TRUE; 
-  static GRID_LINE      line;
-  static int            max_num_linepoints = 0;
-  int                   i, j, unknown;
-  iVECTOR2              start, end, uknw;
-  VECTOR2               abspt, startv, endv;
-  RMOVE2                nomove = {0.0, 0.0, 0.0};
-  double                v, val = 0.0, prob, multprob;
+  static int                   first_time = TRUE; 
+  static logtools_grid_line_t  line;
+  static int                   max_num_linepoints = 0;
+  int                          i, j, unknown;
+  logtools_ivector2_t          start, end, uknw;
+  logtools_vector2_t           abspt, startv, endv;
+  logtools_rmove2_t            nomove = {0.0, 0.0, 0.0};
+  double                       v, val = 0.0, prob, multprob;
   
   if (first_time) {
     max_num_linepoints =
       10 * ( max_range / map->resolution );
-    line.grid = (iVECTOR2 *) malloc( max_num_linepoints * sizeof(iVECTOR2) );
+    line.grid = (logtools_ivector2_t *) malloc( max_num_linepoints * sizeof(logtools_ivector2_t) );
     first_time = FALSE;
   }
 
@@ -542,12 +534,12 @@ compute_scan_probability( MAP2 * map, RPOS2 pos, LASERSENS2_DATA lsens,
     if (lsens.laser.val[j] <= max_usable ) {
       if (0) {
 	if (lsens.laser.val[j] >= max_range ) {
-	  abspt = compute_laser_abs_point( pos, max_range,
-					   nomove, lsens.laser.angle[j] );
-	  map_pos_from_vec2( abspt, map, &end );
+	    abspt = logtools_compute_laser_points( pos, max_range,
+						   nomove, lsens.laser.angle[j] );
+	    map_pos_from_vec2( abspt, map, &end );
 	} else {
-	  abspt = compute_laser_abs_point( pos, lsens.laser.val[j],
-					   nomove, lsens.laser.angle[j] );
+	  abspt = logtools_compute_laser_points( pos, lsens.laser.val[j],
+						 nomove, lsens.laser.angle[j] );
 	  map_pos_from_vec2( abspt, map, &end );
 	}
 	map_pos_from_rpos( pos, map, &start );
@@ -574,7 +566,7 @@ compute_scan_probability( MAP2 * map, RPOS2 pos, LASERSENS2_DATA lsens,
 		  /* logprob +=
 		     log10(prob_unknown_space(vector2_distance(startv, endv),1));*/
 		  multprob *=
-		    prob_unknown_space(vector2_distance(startv, endv),1);
+		    prob_unknown_space(logtools_vector2_distance(startv, endv),1);
 		}
 	      } else {
 		/* known */
@@ -587,7 +579,7 @@ compute_scan_probability( MAP2 * map, RPOS2 pos, LASERSENS2_DATA lsens,
 		  /* logprob +=
 		     log10(prob_unknown_space(vector2_distance(startv,endv),0)); */
 		  multprob *=
-		    prob_unknown_space(vector2_distance(startv, endv),0);
+		    prob_unknown_space(logtools_vector2_distance(startv, endv),0);
 		}
 		if (i<line.numgrids-1) {
 		  multprob *= (1.0-get_map_val( line.grid[i], *map ));
@@ -624,26 +616,28 @@ compute_scan_probability( MAP2 * map, RPOS2 pos, LASERSENS2_DATA lsens,
 
 
 double
-compute_beam_prob( MAP2 * map, RPOS2 pos, double length, double max_range,
+compute_beam_prob( MAP2 * map, logtools_rpos2_t pos, 
+		   double length, double max_range,
 		   double * prob1, double * prob2 )
 {
-  static int            first_time = TRUE; 
-  static GRID_LINE      line;
-  static int            max_num_linepoints = 0;
-  int                   i;
-  iVECTOR2              start, end;
-  VECTOR2               abspt;
-  RMOVE2                nomove = {0.0, 0.0, 0.0};
-  double                lprob = 0.0;
+  static int                    first_time = TRUE; 
+  static logtools_grid_line_t   line;
+  static int                    max_num_linepoints = 0;
+  int                           i;
+  logtools_ivector2_t           start, end;
+  logtools_vector2_t            abspt;
+  logtools_rmove2_t             nomove = {0.0, 0.0, 0.0};
+  double                        lprob = 0.0;
   
   if (first_time) {
     max_num_linepoints =
       10 * ( max_range / map->resolution );
-    line.grid = (iVECTOR2 *) malloc( max_num_linepoints * sizeof(iVECTOR2) );
+    line.grid = (logtools_ivector2_t *) malloc( max_num_linepoints * 
+						sizeof(logtools_ivector2_t) );
     first_time = FALSE;
   }
 
-  abspt = compute_laser_abs_point( pos, length, nomove, 0.0 );
+  abspt = logtools_compute_laser_points( pos, length, nomove, 0.0 );
   map_pos_from_vec2( abspt, map, &end );
   map_pos_from_rpos( pos, map, &start );
 
@@ -671,7 +665,7 @@ compute_beam_prob( MAP2 * map, RPOS2 pos, double length, double max_range,
 }
 
 int
-intersect_bboxes( BOUNDING_BOX2 box1, BOUNDING_BOX2 box2 )
+intersect_bboxes( logtools_bounding_box_t box1, logtools_bounding_box_t box2 )
 {
   if (box1.min.x<=box2.min.x) {
     /* box1.min.x is smaller that box2 */

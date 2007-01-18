@@ -1,79 +1,47 @@
-NAME  = transformer
-CONF  = ../Makefile.conf
-RULES = ../Makefile.rules
+include $(CARMEN_HOME)/src/Makefile.conf
 
-##
-## System config variables
-##
+MODULE_NAME = "GRID_FASTSLAM"
+MODULE_COMMENT = "Grid based Fast SLAM by D. Haehnel"
 
-include $(CONF)
+CFLAGS 	+= 	-Wno-shadow
+IFLAGS 	+=	-I.
+LFLAGS 	+= 	-llogtools -lreadlog -lglobal -lipc
 
-##
-## Variables
-##
+CXXFLAGS += -Wno-non-virtual-dtor
 
-DEPENDENCIES += *.cpp
+QT3_DIR = /usr/lib/qt3
+IFLAGS += -I$(QT3_DIR)/include
 
-INCLUDES    += -I$(QT_DIR)/include
-
-LIB_DIRS    += -L$(QT_DIR)/lib
-
-MOC         = $(QT_DIR)/bin/moc
-
-# CXXFLAGS    += -DDEBUG
-
-##
-## local build variables
-##
-
-OBJS := \
-	$(OBJ_DIR)/read-ini.o \
-	$(OBJ_DIR)/line.o \
-	$(OBJ_DIR)/utils.o \
-	$(OBJ_DIR)/graphics.o \
-	$(OBJ_DIR)/graphics-moc.o \
-	$(OBJ_DIR)/main.o
-
-LIBS := $(EXTERN_LIBS) -lqt -lutils -lm
-
-##
-## Compulsory rules
-##
-
-all:
-	$(MAKE) export $(DEPEND)
-	$(MAKE) build
-
-build:	$(OBJ_DIR) \
-	$(BIN_DIR) \
-	$(LIB_DIR) \
-	$(BIN_DIR)/fast-slam
-
-export:
-
-clean:
-	$(RM) *.o *.a *~ core a.out obj obj_sun obj_solaris $(CLEAN_FILES)
-
-distclean: clean
-	$(RM) $(DEPEND) Makefile.depend* \
-		$(NAME)-src.tgz $(NAME)-bin.tgz $(DISTCLEAN_FILES)
-
-##
-## local rules
-##
-
-$(OBJ_DIR) $(LIB_DIR) $(BIN_DIR):
-	$(SILENT) $(MKDIR) $@
-
-$(BIN_DIR)/fast-slam: $(OBJ_DIR) $(OBJS) 
-	$(ECHO) "    ->>- Creating $@"
-		$(SILENT) $(CXX) $(INCLUDES) $(LIB_DIRS) $(CFLAGS) -o $@ \
-		$(OBJS) $(LIBS)
-
-##
-## Standard suffix, version, packaging and dep rules
-##
-
-include $(RULES)
+ifeq ($(PROCESSOR),x86_64)
+LFLAGS += -L$(QT3_DIR)/lib64
+else
+LFLAGS += -L$(QT3_DIR)/lib
+endif
 
 
+LFLAGS += -lqt-mt `/usr/bin/Magick-config --libs`
+
+LINK  = g++
+
+GUI_FILES = 		./graphics-moc.cpp
+
+ADD_CLEAN += $(GUI_FILES)
+
+SOURCES =		read-ini.c line.c utils.c graphics.cpp main.cpp
+
+PUBLIC_INCLUDES = 
+PUBLIC_LIBRARIES = 
+PUBLIC_BINARIES = 
+
+MAN_PAGES = 
+
+TARGETS = 		fast-slam
+
+# rules
+
+depend:		$(GUI_FILES) 
+
+fast-slam:	$(GUI_FILES) read-ini.o line.o utils.o graphics.o \
+		graphics-moc.o main.o
+
+include ../Makefile.rules

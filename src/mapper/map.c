@@ -1,15 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
-#include <values.h>
-
-#include <navigation/utils.h>
 #include "map2d.h"
 
 double
@@ -22,9 +10,9 @@ get_mapval( int pos_x, int pos_y, MAP2 map )
 #endif
   if ( pos_x>=0 && pos_x<map.mapsize.x &&
        pos_y>=0 && pos_y<map.mapsize.y ) {
-      return( EPSILON + map.mapprob[pos_x][pos_y] ); 
+    return( EPSILON + map.mapprob[pos_x][pos_y] ); 
   } else {
-      return( EPSILON + settings.local_map_std_val );
+    return( EPSILON + settings.local_map_std_val );
   }
   return(0);
 }
@@ -34,8 +22,8 @@ get_mapsum( int pos_x, int pos_y, MAP2 map )
 {
 #ifdef SLOW
   fprintf( settings.devNULL, "%d %d -> %d %d\n", pos_x, pos_y,
-	  map.mapsize.x,
-	  map.mapsize.y );
+	   map.mapsize.x,
+	   map.mapsize.y );
 #endif
   if ( pos_x>=0 && pos_x<map.mapsize.x &&
        pos_y>=0 && pos_y<map.mapsize.y ) {
@@ -56,7 +44,7 @@ get_maphit( int pos_x, int pos_y, MAP2 map )
 #endif
   if ( pos_x>=0 && pos_x<map.mapsize.x &&
        pos_y>=0 && pos_y<map.mapsize.y ) {
-      return( map.maphit[pos_x][pos_y] ); 
+    return( map.maphit[pos_x][pos_y] ); 
   } else {
     return(0);
   }
@@ -70,7 +58,7 @@ max( int a, int b )
 }
 
 int
-find_quadrant( sVECTOR2 center, int x, int y )
+find_quadrant( logtools_svector2_t center, int x, int y )
 {
   if (x>(center.x)) {
     if (y>(center.y)) {
@@ -87,10 +75,10 @@ find_quadrant( sVECTOR2 center, int x, int y )
   }
 }
 
-sVECTOR2
-newcenter( sVECTOR2 center, int i, short stepsize )
+logtools_svector2_t
+newcenter( logtools_svector2_t center, int i, short stepsize )
 {
-  sVECTOR2 ncenter = center;
+  logtools_svector2_t ncenter = center;
   switch(i) {
   case 0:
     ncenter.x += stepsize;
@@ -113,7 +101,7 @@ newcenter( sVECTOR2 center, int i, short stepsize )
 }
 
 void
-alloc_tree( QUAD_TREE * tree, int level, sVECTOR2 center, short stepsize )
+alloc_tree( QUAD_TREE * tree, int level, logtools_svector2_t center, short stepsize )
 {
   int i;
   short nstepsize = stepsize/2;
@@ -134,7 +122,7 @@ initialize_qtree( QUAD_TREE * tree, int size_x, int size_y)
 {
   int i,v,nlevel = max( (int) ceil(log10(size_x)/log10(2)),
 			(int) ceil(log10(size_y)/log10(2)) );
-  sVECTOR2 center;
+  logtools_svector2_t center;
   fprintf( stderr, "* INFO: num levels       = %d\n", nlevel );
   v = 1;
   for (i=0;i<nlevel;i++) v=v*2;
@@ -155,7 +143,7 @@ initialize_qtree( QUAD_TREE * tree, int size_x, int size_y)
 
 void
 initialize_map( MAP2 *map, int sx, int sy, int center_x, int center_y,
-		double resolution, RPOS2 start )
+		double resolution, logtools_rpos2_t start )
 {
   int x, y, j;
 
@@ -167,11 +155,12 @@ initialize_map( MAP2 *map, int sx, int sy, int center_x, int center_y,
   fprintf( stderr, "* INFO: allocating memory ... " );
 
   if (1) {
-    map->updated  = mdalloc( 2, sizeof(unsigned char),  sx, sy );
-    map->maphit   = mdalloc( 2, sizeof(float),  sx, sy );
-    map->mapsum   = mdalloc( 2, sizeof(short),  sx, sy );
-    map->mapprob  = mdalloc( 2, sizeof(float), sx, sy );
-    map->calc     = mdalloc( 2, sizeof(float), sx, sy );
+    map->updated  =
+      (unsigned char **) mdalloc( 2, sizeof(unsigned char),  sx, sy );
+    map->maphit   = (float **) mdalloc( 2, sizeof(float),  sx, sy );
+    map->mapsum   = (short **) mdalloc( 2, sizeof(short),  sx, sy );
+    map->mapprob  = (float **) mdalloc( 2, sizeof(float), sx, sy );
+    map->calc     = (float **) mdalloc( 2, sizeof(float), sx, sy );
   } else {
     map->updated  =
       (unsigned char **) malloc( sx * sizeof(unsigned char *) );
@@ -227,7 +216,7 @@ initialize_map( MAP2 *map, int sx, int sy, int center_x, int center_y,
 
 void
 initialize_ray_map( MAP2 *map, int sx, int sy,
-		    double resolution, RPOS2 start )
+		    double resolution, logtools_rpos2_t start )
 {
   int x, y;
 
@@ -237,8 +226,8 @@ initialize_ray_map( MAP2 *map, int sx, int sy,
   map->offset     = start;
 
   fprintf( stderr, "allocating memory ..." );
-  map->maphit   = mdalloc( 2, sizeof(float),  sx, sy );
-  map->mapsum   = mdalloc( 2, sizeof(short),  sx, sy );
+  map->maphit   = (float **) mdalloc( 2, sizeof(float),  sx, sy );
+  map->mapsum   = (short **) mdalloc( 2, sizeof(short),  sx, sy );
   fprintf( stderr, "done\n" );
   map->center.x = 10; /* map->mapsize.x / 2.0; */
   map->center.y = map->mapsize.y / 2.0;
@@ -284,7 +273,7 @@ simple_compute_map( MAP2 *map )
 }
  
 void
-simple_convolve_map( MAP2 *map, GAUSS_KERNEL kernel )
+simple_convolve_map( MAP2 *map, logtools_gauss_kernel_t kernel )
 {
   int x, y, k, hk;
   double ksum;
@@ -316,7 +305,7 @@ simple_convolve_map( MAP2 *map, GAUSS_KERNEL kernel )
 
  
 void
-simple_inverse_convolve_map( MAP2 *map, GAUSS_KERNEL kernel )
+simple_inverse_convolve_map( MAP2 *map, logtools_gauss_kernel_t kernel )
 {
   int x, y, k, hk;
   double ksum;
@@ -355,146 +344,90 @@ simple_clear_map( MAP2 *map )
     for (y=0;y<map->mapsize.y;y++) {
 	map->mapprob[x][y]     = 0.0;
 	map->maphit[x][y]      = 0.0;
-	map->mapsum[x][y]      = 0.0;
+	map->mapsum[x][y]      = 0;
     }
   }
 }
  
 void
-compute_prob_point( MAP2 *map, int x, int y, int model )
+compute_prob_point( MAP2 *map, int x, int y )
 {
 
-  double          pobj, logodds, odds;
-  static double   dynamic_prob, static_prob;
-  static int      first_time = TRUE;
+  double          pobj;
 
-  if (first_time) {
-    static_prob  = log( settings.local_ray_map_static_prob/
-			(1.0-settings.local_ray_map_static_prob));
-    dynamic_prob = log( settings.local_ray_map_dynamic_prob/
-			(1.0-settings.local_ray_map_dynamic_prob));
-    first_time   = FALSE;
-  } 
+  pobj = log(settings.local_map_object_prob/
+	     (1.0-settings.local_map_object_prob));
   
-  if (model==LOCAL_MAP) {
-    pobj = log(settings.local_map_object_prob/
-	       (1.0-settings.local_map_object_prob));
-    
-    if ( x>=0 && x<map->mapsize.x &&
-	 y>=0 && y<map->mapsize.y ) {
-      if (get_mapsum(x,y,*map)>0) {
-	if (0) {
-	  map->mapprob[x][y]     = map->maphit[x][y] / map->mapsum[x][y];
-	} else {
-	  map->mapprob[x][y]     = 1.0;
-	}
+  if ( x>=0 && x<map->mapsize.x &&
+       y>=0 && y<map->mapsize.y ) {
+    if (get_mapsum(x,y,*map)>0) {
+      if (0) {
+	map->mapprob[x][y]     = map->maphit[x][y] / map->mapsum[x][y];
       } else {
-	map->mapprob[x][y]     = settings.local_map_std_val;
+	map->mapprob[x][y]     = 1.0;
       }
-    }
-    
-  } else if (model==LOCAL_RAY_MAP) {
-    if ( x>=0 && x<map->mapsize.x &&
-	 y>=0 && y<map->mapsize.y ) {
-      if (get_mapsum(x,y,*map)>0) {
-	logodds =
-	  dynamic_prob * map->mapsum[x][y] +
-	  static_prob * map->maphit[x][y];
-	odds = exp(logodds);
-	map->mapprob[x][y]     = (odds / (1+odds));
-      } else {
-	map->mapprob[x][y]     = EPSILON;
-      }
+    } else {
+      map->mapprob[x][y]     = settings.local_map_std_val;
     }
   }
+  
 }
 
 void
-convolve_calc_point( MAP2 *map, GAUSS_KERNEL kernel, int hk,
-		     int x, int y, double std_val, int model )
+convolve_calc_point( MAP2 *map, logtools_gauss_kernel_t kernel, int hk,
+		     int x, int y, double std_val )
 {
   int                     k;
   double                  ksum;
   
   ksum = 0.0;
 
-  if (model==LOCAL_MAP) {
-    if (x-hk>=0 && x+hk<map->mapsize.x) {
-      for (k=0;k<2*hk+1;k++) {
-	if (get_mapsum(x+k-hk,y,*map)>0) {
-	  ksum +=  ( kernel.val[k] * map->mapprob[x+k-hk][y] );
-	} else {
-	  ksum +=  ( kernel.val[k] * std_val );
-	}
+  if (x-hk>=0 && x+hk<map->mapsize.x) {
+    for (k=0;k<2*hk+1;k++) {
+      if (get_mapsum(x+k-hk,y,*map)>0) {
+	ksum +=  ( kernel.val[k] * map->mapprob[x+k-hk][y] );
+      } else {
+	ksum +=  ( kernel.val[k] * std_val );
       }
-      map->calc[x][y]     = ksum;
-      map->updated[x][y]  = UPDT_X;
     }
-  } else if (model==LOCAL_RAY_MAP) {
-    if (x-hk>=0 && x+hk<map->mapsize.x) {
-      for (k=0;k<2*hk+1;k++) {
-	if (get_mapsum(x+k-hk,y,*map)>0) {
-	  if (( kernel.val[k] * map->mapprob[x+k-hk][y] )>ksum)
-	    ksum = ( kernel.val[k] * map->mapprob[x+k-hk][y] );
-	} else {
-	  if (( kernel.val[k] * std_val )>ksum)
-	    ksum = ( kernel.val[k] * std_val );
-	}
-      }
-      map->calc[x][y]     = ksum;
-      map->updated[x][y]  = UPDT_X;
-    }
+    map->calc[x][y]     = ksum;
+    map->updated[x][y]  = UPDT_X;
   }
 }
 
 void
-convolve_prob_point( MAP2 *map, GAUSS_KERNEL kernel, int hk, int x, int y,
-		     int model )
+convolve_prob_point( MAP2 *map, logtools_gauss_kernel_t kernel,
+		     int hk, int x, int y )
 {
   int                     k;
   double                  ksum;
   
   ksum = 0.0;
 
-  if (model==LOCAL_MAP) {
-
-    for (k=0;k<2*hk+1;k++) {
-      if ( x>=0 && x<map->mapsize.x &&
-	   y>=0 && y<map->mapsize.y)
-	ksum +=  ( kernel.val[k] * map->calc[x][y+k-hk] );
-    }
-    map->mapprob[x][y]  = ksum;
-    map->updated[x][y]  = UPDT_Y;
-    
-  } else if (model==LOCAL_RAY_MAP) {
-    
-    for (k=0;k<2*hk+1;k++) {
-      if ( x>=0 && x<map->mapsize.x &&
-	   y>=0 && y<map->mapsize.y) {
-	if (( kernel.val[k] * map->calc[x][y+k-hk] )>ksum)
-	  ksum = kernel.val[k] * map->calc[x][y+k-hk];
-      }
-    }
-    map->mapprob[x][y]  = ksum;
-    map->updated[x][y]  = UPDT_Y;
-    
+  for (k=0;k<2*hk+1;k++) {
+    if ( x>=0 && x<map->mapsize.x &&
+	 y>=0 && y<map->mapsize.y)
+      ksum +=  ( kernel.val[k] * map->calc[x][y+k-hk] );
   }
+  map->mapprob[x][y]  = ksum;
+  map->updated[x][y]  = UPDT_Y;
+  
 }
 
 void
-compute_prob_treemap( QUAD_TREE *tree, MAP2 *map, int model )
+compute_prob_treemap( QUAD_TREE *tree, MAP2 *map )
 {
   if ((tree->level)>0 ) {
     if (tree->elem[0]->inuse)
-      compute_prob_treemap( tree->elem[0], map, model );
+      compute_prob_treemap( tree->elem[0], map );
     if (tree->elem[1]->inuse)
-      compute_prob_treemap( tree->elem[1], map, model );
+      compute_prob_treemap( tree->elem[1], map );
     if (tree->elem[2]->inuse)
-      compute_prob_treemap( tree->elem[2], map, model );
+      compute_prob_treemap( tree->elem[2], map );
     if (tree->elem[3]->inuse)
-      compute_prob_treemap( tree->elem[3], map, model );
+      compute_prob_treemap( tree->elem[3], map );
   } else {
-    compute_prob_point( map, (tree->center.x/2), (tree->center.y/2), model );
+    compute_prob_point( map, (tree->center.x/2), (tree->center.y/2) );
   }
 }
 
@@ -519,25 +452,25 @@ compute_ray_prob_treemap( QUAD_TREE *tree, MAP2 *map )
 
 void
 convolve_calc_treemap( QUAD_TREE *tree, MAP2 *map,
-		       GAUSS_KERNEL kernel, int hk, double std, int model )
+		       logtools_gauss_kernel_t kernel, int hk, double std )
 {
   int i, j;
   if ((tree->level)>0 ) {
     if (tree->elem[0]->inuse)
-      convolve_calc_treemap( tree->elem[0], map, kernel, hk, std, model );
+      convolve_calc_treemap( tree->elem[0], map, kernel, hk, std );
     if (tree->elem[1]->inuse)
-      convolve_calc_treemap( tree->elem[1], map, kernel, hk, std, model );
+      convolve_calc_treemap( tree->elem[1], map, kernel, hk, std );
     if (tree->elem[2]->inuse)
-      convolve_calc_treemap( tree->elem[2], map, kernel, hk, std, model );
+      convolve_calc_treemap( tree->elem[2], map, kernel, hk, std );
     if (tree->elem[3]->inuse)
-      convolve_calc_treemap( tree->elem[3], map, kernel, hk, std, model );
+      convolve_calc_treemap( tree->elem[3], map, kernel, hk, std );
   } else {
     if ( (tree->center.x/2)>hk+1 && (tree->center.x/2)<map->mapsize.x-hk-1 &&
 	 (tree->center.y/2)>hk+1 && (tree->center.y/2)<map->mapsize.y-hk-1 ) {
       for (i=(tree->center.x/2)-hk;i<(tree->center.x/2)+hk;i++) {
 	for (j=(tree->center.y/2)-hk;j<(tree->center.y/2)+hk;j++) {
 	  if (map->updated[i][j] != UPDT_X)
-	    convolve_calc_point( map, kernel, hk, i, j, std, model );
+	    convolve_calc_point( map, kernel, hk, i, j, std );
 	}
       }
     }
@@ -547,25 +480,25 @@ convolve_calc_treemap( QUAD_TREE *tree, MAP2 *map,
 
 void
 convolve_prob_treemap( QUAD_TREE *tree, MAP2 *map,
-		       GAUSS_KERNEL kernel, int hk, int model )
+		       logtools_gauss_kernel_t kernel, int hk )
 {
   int i, j;
   if ((tree->level)>0 ) {
     if (tree->elem[0]->inuse)
-      convolve_prob_treemap( tree->elem[0], map, kernel, hk, model );
+      convolve_prob_treemap( tree->elem[0], map, kernel, hk );
     if (tree->elem[1]->inuse)
-      convolve_prob_treemap( tree->elem[1], map, kernel, hk, model );
+      convolve_prob_treemap( tree->elem[1], map, kernel, hk );
     if (tree->elem[2]->inuse)
-      convolve_prob_treemap( tree->elem[2], map, kernel, hk, model );
+      convolve_prob_treemap( tree->elem[2], map, kernel, hk );
     if (tree->elem[3]->inuse)
-      convolve_prob_treemap( tree->elem[3], map, kernel, hk, model );
+      convolve_prob_treemap( tree->elem[3], map, kernel, hk );
   } else {
     if ( (tree->center.x/2)>hk+1 && (tree->center.x/2)<map->mapsize.x-hk-1 &&
 	 (tree->center.y/2)>hk+1 && (tree->center.y/2)<map->mapsize.y-hk-1 ) {
       for (i=(tree->center.x/2)-hk;i<(tree->center.x/2)+hk;i++) {
 	for (j=(tree->center.y/2)-hk;j<(tree->center.y/2)+hk;j++) {
 	  if (map->updated[i][j] != UPDT_Y)
-	    convolve_prob_point( map, kernel, hk, i, j, model );
+	    convolve_prob_point( map, kernel, hk, i, j );
 	}
       }
     }
@@ -575,60 +508,31 @@ convolve_prob_treemap( QUAD_TREE *tree, MAP2 *map,
 void
 convolve_map( MAP2 *map )
 {
-  int                     i;
-  static int              hk, first_time = TRUE; 
-  static GAUSS_KERNEL     kernel;
+  int                              i;
+  static int                       hk, first_time = TRUE; 
+  static logtools_gauss_kernel_t   kernel;
 
   if (first_time) {
     hk = (settings.local_map_kernel_len-1)/2;
-    kernel = compute_gauss_kernel( settings.local_map_kernel_len );
+    kernel = logtools_compute_gauss_kernel( settings.local_map_kernel_len );
     first_time = FALSE;
   }
 
-  compute_prob_treemap(  &(map->qtree), map, LOCAL_MAP );
+  compute_prob_treemap(  &(map->qtree), map );
   for (i=0;i<settings.local_map_num_convolve;i++) {
     convolve_calc_treemap( &(map->qtree), map, kernel, hk,
-			   settings.local_map_std_val, LOCAL_MAP );
-    convolve_prob_treemap( &(map->qtree), map, kernel, hk, LOCAL_MAP );
+			   settings.local_map_std_val );
+    convolve_prob_treemap( &(map->qtree), map, kernel, hk );
   }
   
 }
-
-void
-convolve_ray_map( MAP2 *map )
-{
-  int                     i;
-  static int              hk, first_time = TRUE; 
-  static GAUSS_KERNEL     kernel;
-
-  if (first_time) {
-    hk = (settings.local_ray_map_kernel_len-1)/2;
-    kernel = compute_gauss_kernel( settings.local_ray_map_kernel_len );
-    first_time = FALSE;
-  }
-
-  compute_prob_treemap(  &(map->qtree), map, LOCAL_RAY_MAP );
-  for (i=0;i<settings.local_ray_map_num_convolve;i++) {
-    convolve_calc_treemap( &(map->qtree), map, kernel, hk,
-			   settings.local_map_std_val, LOCAL_MAP );
-    convolve_prob_treemap( &(map->qtree), map, kernel, hk, LOCAL_MAP );
-  }
-  
-}
-
-/*
-void
-compute_ray_map( MAP2 *map )
-{
-  compute_ray_prob_treemap(  &(map->qtree), map );
-}
-*/
 
 int
-compute_map_pos_from_rpos( RPOS2 rpos, MAP2 *map, iVECTOR2 *v )
+compute_map_pos_from_rpos( logtools_rpos2_t rpos, MAP2 *map,
+			   logtools_ivector2_t *v )
 {
-  v->x = map->center.x + (int) (rpos.x/(double)map->resolution);
-  v->y = map->center.y + (int) (rpos.y/(double)map->resolution);
+  v->x = (int) (map->center.x + (rpos.x/(double)map->resolution));
+  v->y = (int) (map->center.y + (rpos.y/(double)map->resolution));
   if (v->x<0 || v->x>map->mapsize.x-1) {
     return(FALSE);
   }
@@ -639,10 +543,11 @@ compute_map_pos_from_rpos( RPOS2 rpos, MAP2 *map, iVECTOR2 *v )
 }
 
 int
-compute_map_pos_from_vec2( VECTOR2 pos, MAP2 *map, iVECTOR2 *v )
+compute_map_pos_from_vec2( logtools_vector2_t pos, MAP2 *map,
+			   logtools_ivector2_t *v )
 {
-  v->x = map->center.x + (int) (pos.x/(double)(map->resolution));
-  v->y = map->center.y + (int) (pos.y/(double)(map->resolution));
+  v->x = (int) (map->center.x + (pos.x/(double)(map->resolution)));
+  v->y = (int) (map->center.y + (pos.y/(double)(map->resolution)));
   if (v->x<0 || v->x>map->mapsize.x-1) {
     return(FALSE);
   }
@@ -725,7 +630,7 @@ clear_local_treemap( QUAD_TREE *tree, MAP2 *map, int hk )
       for (i=(tree->center.x/2)-hk;i<=(tree->center.x/2)+hk;i++) {
 	for (j=(tree->center.y/2)-hk;j<=(tree->center.y/2)+hk;j++) {
 	  map->maphit[i][j]  = 0;
-	  map->mapsum[i][j]  = 0.0;
+	  map->mapsum[i][j]  = 0;
 	  map->mapprob[i][j] = settings.local_map_std_val;
 	  map->calc[i][j]    = settings.local_map_std_val;
 	  map->updated[i][j] = UPDT_NOT;
@@ -737,23 +642,23 @@ clear_local_treemap( QUAD_TREE *tree, MAP2 *map, int hk )
 }
 
 void
-create_local_map( MAP2 *map, LASERSENS2_DATA data, RMOVE2 movement )
+create_local_map( MAP2 *map, logtools_lasersens2_data_t data,
+		  logtools_rmove2_t movement )
 {
-  int                 i, j, x, y, max_num_linepoints;
-  static RPOS2        npos = {0.0, 0.0, 0.0 };
-  static RMOVE2       nmove = {0.0, 0.0, 0.0 };
-  RPOS2               rpos;
-  iVECTOR2            start, end;
-  VECTOR2             lpos;
+  int                            i, max_num_linepoints;
+  static logtools_rpos2_t        npos = {0.0, 0.0, 0.0 };
+  static logtools_rmove2_t       nmove = {0.0, 0.0, 0.0 };
+  logtools_rpos2_t               rpos;
+  logtools_ivector2_t            start, end;
+  logtools_vector2_t             lpos;
   static int          first_time = TRUE;
-  static GRID_LINE    line;
-  RMOVE2              offset;
+  static logtools_grid_line_t    line;
+  logtools_rmove2_t   offset;
 
   if (first_time) {
-    max_num_linepoints =
-      2 * ( settings.local_map_max_range /
-	    settings.local_map_resolution );
-    line.grid = (iVECTOR2 *) malloc( max_num_linepoints * sizeof(iVECTOR2) );
+    max_num_linepoints = (int)
+      (2 * ( settings.local_map_max_range / settings.local_map_resolution ));
+    line.grid = (logtools_ivector2_t *) malloc( max_num_linepoints * sizeof(logtools_ivector2_t) );
     first_time = FALSE;
   }
 
@@ -761,13 +666,13 @@ create_local_map( MAP2 *map, LASERSENS2_DATA data, RMOVE2 movement )
   offset.sideward = movement.sideward; // + data.laser.offset[i].sideward;
   offset.rotation = movement.rotation; // + data.laser.offset[i].rotation;
 
-  rpos  = compute_rpos2_backwards_with_movement2( npos, offset );
+  rpos  = logtools_rpos2_backwards_with_movement2( npos, offset );
 
   compute_map_pos_from_rpos( rpos, map, &start );
 
   for (i=0;i<data.laser.numvalues;i++) {
     
-    lpos = map2d_compute_laser_abs_point( rpos,
+    lpos = logtools_compute_laser_points( rpos,
 					  data.laser.val[i],
 					  nmove, // data.laser.offset[i],
 					  data.laser.angle[i] );
@@ -776,100 +681,11 @@ create_local_map( MAP2 *map, LASERSENS2_DATA data, RMOVE2 movement )
 	   end.x>=0 && end.x<map->mapsize.x &&
 	   end.y>=0 && end.y<map->mapsize.y ) {
 	set_mapsumpoint( map, end.x, end.y );
-	if (settings.use_global_ray_map) {
-	  set_maphitpoint( map, end.x, end.y, data.ptracking.hprob[i] );
-	} else if (settings.use_people_prob) {
-	  set_maphitpoint( map, end.x, end.y, 1.0-data.ptracking.hprob[i] );
-	} else {
-	  set_maphitpoint( map, end.x, end.y, 1.0 );
-	}
-	if (0) {
-	  grid_line( start, end, &line );
-	  for (j=0;j<line.numgrids-settings.local_ray_map_shorten_ray;j++) {
-	    x = line.grid[j].x;
-	    y = line.grid[j].y;
-	    if ( x>=0 && x<map->mapsize.x &&
-		 y>=0 && y<map->mapsize.y ) {
-	      set_mapsumpoint( map, x, y );
-	    }
-	  }
-	}
+	set_maphitpoint( map, end.x, end.y, 1.0 );
       }
     }
   }
 }
-
-void
-create_local_ray_map( MAP2 *map, LASERSENS2_DATA data, RMOVE2 movement )
-{
-  int                 i, j, x, y, max_num_linepoints;
-  static RPOS2        npos = {0.0, 0.0, 0.0 };
-  static RMOVE2       nmove = {0.0, 0.0, 0.0 };
-  RPOS2               rpos;
-  iVECTOR2            start, end;
-  VECTOR2             lpos;
-  double              val;
-  static int          first_time = TRUE;
-  static GRID_LINE    line;
-  RMOVE2              offset;
-
-#ifdef DEBUG
-  fprintf( stderr, "local move  = %.4f %.4f %.4f (%.4f deg)\n",
-	   movement.forward, movement.sideward,
-	   movement.rotation, rad2deg(movement.rotation) );
-#endif
-
-  if (first_time) {
-    max_num_linepoints =
-      2 * ( settings.local_map_max_range /
-	    settings.local_ray_map_resolution );
-    line.grid = (iVECTOR2 *) malloc( max_num_linepoints * sizeof(iVECTOR2) );
-    first_time = FALSE;
-  }
-
-  offset.forward  = movement.forward; //  + data.laser.offset[i].forward;
-  offset.sideward = movement.sideward; // + data.laser.offset[i].sideward;
-  offset.rotation = movement.rotation; // + data.laser.offset[i].rotation;
-
-  rpos  = compute_rpos2_backwards_with_movement2( npos, offset );
-
-  compute_map_pos_from_rpos( rpos, map, &start );
-  
-  for (i=0;i<data.laser.numvalues;i++) {
-    
-    if ( data.laser.val[i]<settings.max_usable_laser_range) {
-      
-      if ( data.laser.val[i]<settings.local_map_max_range) {
-	val = data.laser.val[i];
-      } else {
-	val = settings.local_ray_map_max_range;
-      }
-      
-      lpos = map2d_compute_laser_abs_point( rpos, val,
-					    nmove, // data.laser.offset[i],
-					    data.laser.angle[i] );
-      
-      compute_map_pos_from_vec2( lpos, map, &end );
-      if ( data.laser.val[i]<settings.local_map_max_range) {
-	if ( end.x>=0 && end.x<map->mapsize.x &&
-	     end.y>=0 && end.y<map->mapsize.y ) {
-	  set_maphitpoint( map, end.x, end.y, 1 );
-	}
-      }
-      
-      grid_line( start, end, &line );
-      for (j=0;j<line.numgrids-settings.local_ray_map_shorten_ray;j++) {
-	x = line.grid[j].x;
-	y = line.grid[j].y;
-	if ( x>=0 && x<map->mapsize.x &&
-	     y>=0 && y<map->mapsize.y ) {
-	  set_mapsumpoint( map, x, y );
-	}
-      }
-    }
-  }
-}
-
 
 void
 compute_probs_of_global_map( MAP2 * global_map )
@@ -888,31 +704,6 @@ compute_probs_of_global_map( MAP2 * global_map )
       }
     }
   }
-  
-}
-
-void
-compute_probs_of_global_ray_map( MAP2 * global_map )
-{
-  int        x, y;
-  GAUSS_KERNEL     kernel;
-
-  kernel = compute_gauss_kernel( 3 );
-
-  for (x=0;x<global_map->mapsize.x;x++) {
-    for (y=0;y<global_map->mapsize.y;y++) {
-      if (global_map->mapsum[x][y]>0) {
-	global_map->mapprob[x][y] = 
-	  ( global_map->maphit[x][y] /
-	    (double) ( global_map->maphit[x][y] + global_map->mapsum[x][y] ) );
-      } else {
-	global_map->mapprob[x][y] =
-	  settings.dynprob_prior;
-      }
-    }
-  }
-  
-   simple_convolve_map( global_map, kernel );
   
 }
 

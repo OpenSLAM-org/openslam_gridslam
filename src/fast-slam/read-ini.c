@@ -1,18 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#include <signal.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
-#include <values.h>
-
-#include <navigation/utils.h>
-
 #include "fast-slam.h"
 
 FASTSLAM_SETTINGS          settings;
@@ -54,7 +39,8 @@ set_default( void )
   settings.unknown_likelihood              = 0.83;
 
   settings.min_step_distance               = 500.0;
-      
+
+  settings.laser_id                        = 0;
 }
 
 #define MAX_COMMAND_LENGTH      1024

@@ -8,6 +8,16 @@
 
 #include <qfiledialog.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "map2d.h"
+
+#ifdef __cplusplus
+}
+#endif
+
 void MapGUI::UpdateMapSlot()
 {
   Map->updateMap();
@@ -29,23 +39,9 @@ void MapGUI::MenuNewSlot()
   fprintf( stderr, "pressed new button\n" );
 }
 
-void MapGUI::MenuSaveSlot()
-{
-  Map->saveMap();
-}
-
 void MapGUI::MenuOpenSlot()
 {
   fprintf( stderr, "pressed open button\n" );
-}
-
-void MapGUI::MenuSaveAsSlot()
-{
-  QString filename =
-    QFileDialog::getSaveFileName( QString::null, "MAP-files (*.*)", this );
-  if ( !filename.isEmpty() ) {
-    Map->saveMapAs( (char *) filename.ascii() );
-  }
 }
 
 void MapGUI::MenuPrintSlot()
@@ -69,22 +65,6 @@ void MapGUI::GlobalMapTypeSlot()
 void MapGUI::LocalMapTypeSlot()
 {
   Map->maptype = LOCAL_MAP;
-  Map->updateMap();
-  Map->centerRobot();
-}
-
-
-void MapGUI::RayMapTypeSlot()
-{
-  Map->maptype = LOCAL_RAY_MAP;
-  Map->updateMap();
-  Map->centerRobot();
-}
-
-
-void MapGUI::GlobalRayMapTypeSlot()
-{
-  Map->maptype = GLOBAL_RAY_MAP;
   Map->updateMap();
   Map->centerRobot();
 }

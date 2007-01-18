@@ -1,17 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
-#include <values.h>
-
-#include <navigation/utils.h>
 #include "map2d.h"
 
 ONLINE_LASER_DATA       online_data;
@@ -19,9 +5,9 @@ int                     online_scan_ctr    = 0;
 int                     online_laserupdate = FALSE;
 int                     online_odo_update = FALSE;
 
-LASERSENS2_DATA         * current_scan;
-RMOVE2                  * current_movement;
-RPOS2                     current_pos = {0.0, 0.0, 0.0};
+logtools_lasersens2_data_t   * current_scan;
+logtools_rmove2_t            * current_movement;
+logtools_rpos2_t               current_pos = {0.0, 0.0, 0.0};
 
 int                       loop = TRUE;
 int                       change_map = TRUE;
@@ -43,15 +29,17 @@ alloc_online_structures( ONLINE_LASER_DATA * data, REC2_MOVEMENTS * movements )
   nh = (nh>0?nh:1);
     
   data->lsens =
-    (LASERSENS2_DATA *) malloc( nh * sizeof(LASERSENS2_DATA) );
+    (logtools_lasersens2_data_t *)
+    malloc( nh * sizeof(logtools_lasersens2_data_t) );
   
   for (i=0; i<nh; i++) {
     data->lsens[i].laser.val        =
-      (double *) malloc( MAX_NUM_LASER_BEAMS * sizeof(double) );
+      (float *) malloc( MAX_NUM_LASER_BEAMS * sizeof(double) );
     data->lsens[i].laser.angle      =
-      (double *) malloc( MAX_NUM_LASER_BEAMS * sizeof(double) );
+      (float *) malloc( MAX_NUM_LASER_BEAMS * sizeof(double) );
     data->lsens[i].coord            =
-      (LASER_COORD2 *) malloc( MAX_NUM_LASER_BEAMS * sizeof(LASER_COORD2) );
+      (logtools_laser_coord2_t *) malloc( MAX_NUM_LASER_BEAMS *
+					  sizeof(logtools_laser_coord2_t) );
     /*
       data->lsens[i].poly.pt          =
       (VECTOR2 *) malloc( MAX_NUM_LASER_BEAMS * sizeof(VECTOR2) );
@@ -61,149 +49,8 @@ alloc_online_structures( ONLINE_LASER_DATA * data, REC2_MOVEMENTS * movements )
   data->lsens[0].estpos = settings.global_map_start_pos;
 
   movements->nummovements = nh;
-  movements->pos          = (RPOS2 *) malloc( nh * sizeof(RPOS2) );
-  movements->move         = (RMOVE2 *) malloc( nh * sizeof(RMOVE2) );
-}
-
-void
-data_open_file_stream()
-{
-  int                slen1, slen2;
-  
-  slen1 = strlen(FILE_SCRIPT_EXT);
-  slen2 = strlen(FILE_REC_EXT);
-  
-  if ( ((int) strlen(settings.data_filename)) > slen1 &&
-       !strcmp( &settings.data_filename[strlen(settings.data_filename)-slen1],
-		FILE_SCRIPT_EXT ) ) {
-    fprintf( stderr, "* INFO: use script-file-type!\n" );
-    settings.script_type = SCRIPT;
-  } else if ( ((int) strlen(settings.data_filename)) > slen2 &&
-	      !strcmp( &settings.data_filename[strlen(settings.data_filename)-slen2],
-		       FILE_REC_EXT ) ) {
-    fprintf( stderr, "* INFO: read rec-file-type!\n" );
-    settings.script_type = REC;
-  } else {
-    fprintf( stderr, "* INFO: assuming script-file-type\n" );
-    settings.script_type = SCRIPT;
-  }
-  fprintf( stderr, "***************************************\n" );
-
-  if ((settings.dataF = fopen( settings.data_filename, "r")) == 0){
-   fprintf(stderr, "ERROR: could not open input file %s\n",
-	   settings.data_filename );
-   exit(0);
- }
- fprintf(stderr, "* INFO: open input file %s\n", settings.data_filename ); 
-	  
-}
-
-
-enum ENTRY_TYPE
-line_type( REC2_DATA rec )
-{
-  if (rec.numpositions+
-      rec.numcpositions+
-      rec.numlaserscans>1) {
-    return(UNKNOWN);
-  } else {
-    if (rec.numpositions>0) {
-      return(POSITION);
-    } else if (rec.numcpositions>0) {
-      return(CORR_POSITION);
-    } else if (rec.numlaserscans>0) {
-      return(LASER_VALUES);
-    } else {
-      return(UNKNOWN);
-    }
-  }
-}
-
-int
-data_read_next_dataset( void )
-{
-  static char           line[MAX_LINE_LENGTH];
-  static REC2_DATA      rec;
-  static int            first_time = TRUE;
-  static int            file_closed = FALSE;
-  int                   r, i;
-
-  if (first_time) {
-    rec.entry   =
-      (ENTRY_POSITION *) malloc( sizeof(ENTRY_POSITION) );
-    rec.psens =
-      (POSSENS2_DATA *) malloc( sizeof(POSSENS2_DATA) ); 
-    rec.cpsens =
-      (POSSENS2_DATA *) malloc( sizeof(POSSENS2_DATA) ); 
-    rec.lsens =
-      (LASERSENS2_DATA *) malloc( sizeof(LASERSENS2_DATA) );
-    rec.lsens[0].laser.val =
-      (double *) malloc( MAX_NUM_LASER_VALUES * sizeof(double) );
-    rec.lsens[0].laser.maxrange =
-      (int *) malloc( MAX_NUM_LASER_VALUES * sizeof(int) );
-    rec.lsens[0].laser.angle =
-      (double *) malloc( MAX_NUM_LASER_VALUES * sizeof(double) );
-    rec.lsens[0].laser.offset =
-      (RMOVE2 *) malloc( MAX_NUM_LASER_VALUES * sizeof(RMOVE2) );
-    first_time = FALSE;
-  }
-
-  if (!file_closed) {
-    if (fgets(line,MAX_LINE_LENGTH,settings.dataF) == NULL) {
-      fclose(settings.dataF);
-      file_closed = TRUE;
-    } else {
-      rec.numpositions   = 0;
-      rec.numcpositions  = 0;
-      rec.numlaserscans  = 0;
-      rec.numentries     = 0;
-      rec2_parse_line( line, &rec, FALSE, FALSE );
-      switch(line_type( rec )) {
-      case POSITION:
-	current_pos.x = rec.psens[0].rpos.x;
-	current_pos.y = rec.psens[0].rpos.y;
-	current_pos.o = rec.psens[0].rpos.o;
-	break;
-      case CORR_POSITION:
-	break;
-      case POS_CORR:
-	break;
-      case LASER_VALUES:
-	if (rec.lsens[0].id == settings.laser_number) {
-	  r = online_scan_ctr%settings.local_map_num_history;
-	  online_data.lsens[r].laser.numvalues = rec.lsens[0].laser.numvalues;
-	  for (i = 0; i < rec.lsens[0].laser.numvalues; i++){
-	    online_data.lsens[r].laser.val[i]     = rec.lsens[0].laser.val[i];
-	    online_data.lsens[r].laser.angle[i]   = rec.lsens[0].laser.angle[i];
-	  }
-	  online_data.lsens[r].laser.time       = rec.lsens[0].laser.time;
-	  online_data.lsens[r].id               = rec.lsens[0].id;
-	  online_data.lsens[r].laser.anglerange = rec.lsens[0].laser.anglerange;
-	  online_data.lsens[r].estpos           = current_pos;
-	  online_laserupdate = TRUE;
-	} 
-	break;
-      case UNKNOWN:
-	break;
-      case LASER_VALUES3:
-	break;
-      case HUMAN_PROB:
-	break;
-      case AMTEC_POS:
-	break;
-      case GPS:
-	break;
-      case COMPASS:
-	break;
-      default:
-	break;
-      }
-    }
-    return(TRUE);
-  } else {
-    return(FALSE);
-  }
- 
+  movements->pos          = (logtools_rpos2_t *) malloc( nh * sizeof(logtools_rpos2_t) );
+  movements->move         = (logtools_rmove2_t *) malloc( nh * sizeof(logtools_rmove2_t) );
 }
 
 
@@ -212,19 +59,19 @@ data_read_next_dataset( void )
  ****************************************************************/
 
 void
-run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
-	    MAP2 * gmap, int online )
+run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * gmap,
+	    int argc, char *argv[] )
 {
   static int              update_ctr = 0;
 
   int                     h, l, hk, tctr, r, r_new, r_old, ctr=0;
 
   REC2_MOVEMENTS          movements;
-  RPOS2                   npos   = {0.0, 0.0, 0.0};
+  logtools_rpos2_t        npos   = {0.0, 0.0, 0.0};
   
-  RMOVE2                  lmove, move, bestmove;
-  RMOVE2                  nomove = { 0.0, 0.0, 0.0 };
-  LASER_COORD2            coord[MAX_NUM_LASER_VALUES];
+  logtools_rmove2_t       lmove, move, bestmove;
+  logtools_rmove2_t       nomove = { 0.0, 0.0, 0.0 };
+  logtools_laser_coord2_t coord[MAX_NUM_LASER_VALUES];
   
   int                     moctr, loctr, nhist;
 
@@ -236,11 +83,7 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
 
   signal(SIGINT, abort_signal);
 
-  if (online) {
-    ipc_init( "map2d" );
-  } else {
-    data_open_file_stream();
-  }
+  ipc_init( argc, argv );
 
   fprintf( stderr, "***************************************\n" );
   fprintf( stderr, "*        START\n" );
@@ -249,11 +92,7 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
   loctr = 0;
   while (loop) {
     
-    if (online) {
-      ipc_update();
-    } else {
-      data_read_next_dataset();
-    }
+    ipc_update();
     
     if (online_laserupdate) {
       
@@ -280,10 +119,10 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
   
 	    r_old = (nhist+online_scan_ctr-1)%nhist;
 	    r_new = (online_scan_ctr)%nhist;
-
+	    
 	    move =
-	      compute_movement2_between_rpos2( movements.pos[r_old],
-					       current_pos );
+	      logtools_movement2_between_rpos2( movements.pos[r_old],
+						current_pos );
 
 	    if (rmove2_length(move)>settings.pos_diff_min_dist) {
 	      
@@ -303,17 +142,18 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
 				 online_data.lsens[h%nhist].estpos ) >
 		     settings.local_map_min_bbox_distance ) {
 		  lmove =
-		    compute_movement2_between_rpos2( online_data.lsens[h%nhist].estpos,
-						     online_data.lsens[r_old].estpos );
+		    logtools_movement2_between_rpos2( online_data.lsens[h%nhist].estpos,
+						      online_data.lsens[r_old].estpos );
 		  moctr = h%nhist;
 		  create_local_map( lmap, online_data.lsens[h%nhist], lmove );
 		  tctr++;
 		}
 	      }
 	      convolve_map( lmap );
-	      bestmove = fit_data_in_local_map( *lmap, *rmap,
+	      bestmove = fit_data_in_local_map( *lmap,
 						&(online_data.lsens[r]),
-						move, tctr, online_scan_ctr, 0 );
+						move );
+
 	      if ( minimal_rmove_diff( bestmove, 
 				       settings.pos_diff_min_dist, 
 				       settings.pos_diff_min_rot )) {
@@ -323,7 +163,7 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
 
 		/* position of last scan */
 		online_data.lsens[r].estpos =
-		  compute_rpos2_with_movement2( online_data.lsens[r_old].estpos,
+		  logtools_rpos2_with_movement2( online_data.lsens[r_old].estpos,
 						bestmove );
 		for (l=0;l<online_data.lsens[r].laser.numvalues;l++) {
 		  /*
@@ -346,32 +186,26 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
 		if (settings.use_global_map && change_map) {
 		  update_global_map( online_data.lsens[r], gmap );
 		}
-		if (online) {
-		  ipc_publish_status( online_data.lsens[r].estpos,
-				      online_data.lsens[r].laser.time );
+
+		if (settings.log_output) {
+		  write_log_entry( settings.logF, &(online_data.lsens[r]) );
 		}
-		if (settings.script_output) {
-		  write_script_entry( settings.scriptF,
-				      online_data.lsens[r],
-				      online_data.lsens[r].id );
-		}
-		if (1) 
-		  switch(window_maptype()) {
-		  case LOCAL_MAP:
-		    if (update_ctr%20==0) {
-		      update_map();
-		      update_ctr = 0;
-		    }
-		    paint_robot( npos );
-		    break;
-		  case GLOBAL_MAP:
-		    if (settings.show_updates &&
-			update_ctr%settings.show_updates==0)
-		      update_map();
-		    
-		    paint_robot( online_data.lsens[r].estpos );
-		    break;
+		switch(window_maptype()) {
+		case LOCAL_MAP:
+		  if (update_ctr%20==0) {
+		    update_map();
+		    update_ctr = 0;
 		  }
+		  paint_robot( npos );
+		  break;
+		case GLOBAL_MAP:
+		  if (settings.show_updates &&
+		      update_ctr%settings.show_updates==0)
+		    update_map();
+		  
+		  paint_robot( online_data.lsens[r].estpos );
+		  break;
+		}
 		if (change_map) {
 		  online_scan_ctr++;
 		} else { 
@@ -436,17 +270,11 @@ run_online( MAP2D_SETTINGS settings, MAP2 * lmap, MAP2 * rmap,
 	    }
 	  }
 	}
-	if (settings.output_data_map) {
-	  write_data_entry( settings.outputF,
-			    online_data.lsens[r],
-			    online_data.lsens[r].id );
-	}
 	
       }
       
     }
-    if(online)
-      usleep(settings.loop_sleep);
+    usleep(settings.loop_sleep);
     if (settings.use_graphics) {
       app_process_events();
     }

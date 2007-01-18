@@ -5,16 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <signal.h>
-#include <math.h>
-#include <sys/time.h>
-#include <time.h>
-
-#include <navigation/utils.h>
+#include "fast-slam.h"
 
 #ifdef __cplusplus
 }
@@ -139,12 +130,12 @@ MapPainter::refresh( MAP2 )
 }
 
 void
-MapPainter::showscan( MAP2 map, LASERSENS2_DATA lsens, double maxrange )
+MapPainter::showscan( MAP2 map, logtools_lasersens2_data_t lsens, double maxrange )
 {
   int                   i;
-  RMOVE2                nomove = {0.0, 0.0, 0.0};
-  iVECTOR2              start, end;
-  VECTOR2               abspt;
+  logtools_rmove2_t     nomove = {0.0, 0.0, 0.0};
+  logtools_ivector2_t   start, end;
+  logtools_vector2_t    abspt;
   QPen                  usedpen = QPen( qRgb( 255, 0, 0 ) );
   QPen                  maxrpen = QPen( qRgb( 255, 255, 0 ) );
 
@@ -152,12 +143,12 @@ MapPainter::showscan( MAP2 map, LASERSENS2_DATA lsens, double maxrange )
     for (i=0; i<lsens.laser.numvalues; i++) {
       if (lsens.laser.val[i]<=maxrange) {
 	pt->setPen( usedpen );
-	abspt = compute_laser_abs_point( lsens.estpos, lsens.laser.val[i],
-					 nomove, lsens.laser.angle[i] );
+	abspt = logtools_compute_laser_points( lsens.estpos, lsens.laser.val[i],
+					       nomove, lsens.laser.angle[i] );
       } else {
 	pt->setPen( maxrpen );
-	abspt = compute_laser_abs_point( lsens.estpos, maxrange,
-					 nomove, lsens.laser.angle[i] );
+	abspt = logtools_compute_laser_points( lsens.estpos, maxrange,
+					       nomove, lsens.laser.angle[i] );
       }
       if ( map_pos_from_vec2( abspt, &map, &end ) ) {
 	pt->drawLine( (map.mapsize.x-1-start.x), start.y,
@@ -175,10 +166,10 @@ RGB colors[] = { { 255,   0,   0 },
 		 {   0,   0,   255 } };
 
 void
-MapPainter::drawrobot( MAP2 map, RPOS2 pos, int color )
+MapPainter::drawrobot( MAP2 map, logtools_rpos2_t pos, int color )
 {
   
-  iVECTOR2              vec;
+  logtools_ivector2_t   vec;
   int                   cidx = color % NUM_COLORS;
   QBrush                brush = QBrush( qRgb( (int) colors[cidx].r,
 					      (int) colors[cidx].g,
@@ -207,9 +198,9 @@ MapPainter::doPaint(  ) {
 
 
 void
-MapPainter::centerView( MAP2 map, RPOS2 pos )
+MapPainter::centerView( MAP2 map, logtools_rpos2_t pos )
 {
-  iVECTOR2              vec;
+  logtools_ivector2_t    vec;
   if (map_pos_from_rpos( pos, &map, &vec ) ) {
     //center( (map.mapsize.x-1-vec.x)-4, vec.y-4);
     ensureVisible( (map.mapsize.x-1-vec.x)-4, vec.y-4);
@@ -223,7 +214,7 @@ MapPainter::drawparticles( MAP2 map, SAMPLE_SET pset, int, int showpath )
 {
 
   int                   hist, i, j;
-  iVECTOR2              vec, vec1, vec2;
+  logtools_ivector2_t   vec, vec1, vec2;
   QPen                  pen1 = QPen( qRgb( 0, 0, 0 ) ); /* black */
   QPainter              dump;
 

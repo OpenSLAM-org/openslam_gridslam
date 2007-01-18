@@ -8,6 +8,9 @@
 **
 *****************************************************************************/
 
+#ifndef MAPVIEW_H
+#define MAPVIEW_H
+
 #include <qscrollview.h>
 #include <qapplication.h>
 #include <qmenubar.h>
@@ -29,8 +32,8 @@
 extern "C" {
 #endif
 
-#include <navigation/utils.h>
-#include "map2d.h"
+#include <carmen/carmen.h>
+#include <carmen/logtools.h>
 
 #ifdef __cplusplus
 }
@@ -43,26 +46,24 @@ class MapView : public QScrollView {
   MapView(QWidget* parent, const char * = 0 );
 
   void drawContents( QPainter *p, int cx, int cy, int cw, int ch );
-  void paintRobot( RPOS2 pos );
-  void plotRobotPosition( RPOS2 pos );
+  void paintRobot( logtools_rpos2_t pos );
+  void plotRobotPosition( logtools_rpos2_t pos );
   void centerRobot( void );
-  void saveMap( void );
-  void saveMapAs( char * filename );
   void updateMap( void );
   void clearMap( void );
   void setGlobalSize( int size_x, int size_y );
-  void setGlobalRaySize( int size_x, int size_y );
   void setLocalSize( int size_x, int size_y );
-  void setLocalRaySize( int size_x, int size_y );
   void showRays();
   int  maptype;
   
  private:
-  QImage      * gimage;
-  QImage      * grimage;
-  QImage      * limage;
-  QImage      * rimage;
-  QPainter    * pt;
-  RPOS2         rpos;
+  QImage           * gimage;
+  QImage           * grimage;
+  QImage           * limage;
+  QImage           * rimage;
+  QPainter         * pt;
+  logtools_rpos2_t   rpos;
 
 };
+
+#endif
